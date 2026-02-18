@@ -1,0 +1,5 @@
+bin/
+*.db
+*.log
+.DS_Store
+.omc/

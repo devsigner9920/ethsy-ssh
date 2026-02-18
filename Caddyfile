@@ -1,0 +1,40 @@
+# ethsy-ssh Caddy reverse proxy configuration
+#
+# Install: sudo apt install caddy (Linux) / brew install caddy (macOS)
+# Run:     sudo caddy run --config /path/to/Caddyfile
+#
+# Caddy automatically provisions and renews TLS certificates via Let's Encrypt.
+# Ensure DNS A records point to this server:
+#   connect.ethsy.me -> server IP
+#   ssh.ethsy.me     -> server IP
+#
+# SSH (port 9920) is handled directly by sshd, not through Caddy.
+
+# OAuth + CLI API
+connect.ethsy.me {
+	# Debug: show client IP (remove after testing)
+	handle /myip {
+		respond "{remote_host}" 200
+	}
+
+	# Admin: allow localhost and trusted IPs only
+	@admin_allowed {
+		path /admin*
+		remote_ip 127.0.0.1 ::1 49.164.90.157 192.168.219.0/24
+	}
+	handle @admin_allowed {
+		reverse_proxy 127.0.0.1:10001
+	}
+	handle /admin* {
+		respond "Forbidden" 403
+	}
+	handle {
+		reverse_proxy 127.0.0.1:10001
+	}
+}
+
+# SSH domain - serves a simple info page.
+# Actual SSH connections go directly to port 9920, not through Caddy.
+ssh.ethsy.me {
+	respond "SSH into this host: ssh -t -p 9920 ethsy@ssh.ethsy.me" 200
+}
