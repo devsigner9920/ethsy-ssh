@@ -46,6 +46,8 @@ homebrew_casks:
   - name: ethsy-connect
     ids:
       - ethsy-connect
+    binaries:
+      - ethsy
     repository:
       owner: devsigner9920
       name: homebrew-tap
@@ -55,6 +57,8 @@ homebrew_casks:
 
   - name: ethsy-server
     ids:
+      - ethsy-server
+    binaries:
       - ethsy-server
     repository:
       owner: devsigner9920
