@@ -34,6 +34,15 @@ func SSHConnect(tmuxName string) error {
 		fmt.Sprintf("bash -l -c 'tmux attach -t %s'", tmuxName),
 	}
 
+	// Filter out Claude Code env vars to prevent nested session detection.
+	env := make([]string, 0, len(os.Environ()))
+	for _, e := range os.Environ() {
+		if len(e) >= 10 && e[:10] == "CLAUDECODE" || len(e) >= 11 && e[:11] == "CLAUDE_CODE" {
+			continue
+		}
+		env = append(env, e)
+	}
+
 	// Replace current process with ssh using syscall.Exec
-	return syscall.Exec(sshPath, args, os.Environ())
+	return syscall.Exec(sshPath, args, env)
 }
