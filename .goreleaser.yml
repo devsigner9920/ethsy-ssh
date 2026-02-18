@@ -1,0 +1,74 @@
+version: 2
+
+project_name: ethsy-ssh
+
+builds:
+  - id: ethsy-server
+    main: ./server/
+    binary: ethsy-server
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+  - id: ethsy-connect
+    main: ./connect/
+    binary: ethsy
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: ethsy-server
+    ids:
+      - ethsy-server
+    name_template: "ethsy-server_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+
+  - id: ethsy-connect
+    ids:
+      - ethsy-connect
+    name_template: "ethsy-connect_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+
+homebrew_casks:
+  - name: ethsy-connect
+    ids:
+      - ethsy-connect
+    repository:
+      owner: devsigner9920
+      name: homebrew-tap
+    homepage: "https://github.com/devsigner9920/ethsy-ssh"
+    description: "CLI client for ethsy.me remote tmux session sharing"
+    license: "MIT"
+
+  - name: ethsy-server
+    ids:
+      - ethsy-server
+    repository:
+      owner: devsigner9920
+      name: homebrew-tap
+    homepage: "https://github.com/devsigner9920/ethsy-ssh"
+    description: "Server for ethsy.me remote tmux session sharing"
+    license: "MIT"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
