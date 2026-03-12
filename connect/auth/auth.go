@@ -52,17 +52,22 @@ func OpenBrowser(url string) error {
 	case "darwin":
 		candidates = [][]string{{"open", url}}
 	case "linux":
-		if os.Getenv("TERMUX_VERSION") != "" {
-			// Termux/Android: use absolute paths to avoid PATH lookup syscalls
-			// that may be blocked by Android seccomp on some devices.
+		isTermux := os.Getenv("TERMUX_VERSION") != "" ||
+			os.Getenv("PREFIX") == "/data/data/com.termux/files/usr" ||
+			strings.Contains(os.Getenv("HOME"), "/data/data/com.termux")
+
+		if isTermux {
+			// Termux/Android: absolute paths only (avoid LookPath/faccessat2 SIGSYS).
 			candidates = append(candidates,
 				[]string{"/data/data/com.termux/files/usr/bin/termux-open-url", url},
 				[]string{"/system/bin/am", "start", "-a", "android.intent.action.VIEW", "-d", url},
 			)
 		} else {
+			// Non-Termux Linux: absolute common paths first, then explicit fallback.
 			candidates = append(candidates,
-				[]string{"xdg-open", url},
-				[]string{"gio", "open", url},
+				[]string{"/usr/bin/xdg-open", url},
+				[]string{"/bin/xdg-open", url},
+				[]string{"/usr/bin/gio", "open", url},
 			)
 		}
 	default:
