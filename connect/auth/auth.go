@@ -74,6 +74,12 @@ func OpenBrowser(url string) error {
 		return fmt.Errorf("지원하지 않는 운영체제: %s", runtime.GOOS)
 	}
 
+	// On some Android/Termux environments, process spawning may be blocked by seccomp.
+	// In that case, user can open printed URL manually; do not crash auth flow.
+	if os.Getenv("ANDROID_ROOT") != "" && runtime.GOOS == "linux" {
+		return nil
+	}
+
 	var lastErr error
 	for _, c := range candidates {
 		if len(c) == 0 {
