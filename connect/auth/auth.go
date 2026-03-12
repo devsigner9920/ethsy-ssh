@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -51,17 +52,19 @@ func OpenBrowser(url string) error {
 	case "darwin":
 		candidates = [][]string{{"open", url}}
 	case "linux":
-		// Termux first, then generic Linux openers.
 		if os.Getenv("TERMUX_VERSION") != "" {
+			// Termux/Android: use absolute paths to avoid PATH lookup syscalls
+			// that may be blocked by Android seccomp on some devices.
 			candidates = append(candidates,
-				[]string{"termux-open-url", url},
-				[]string{"am", "start", "-a", "android.intent.action.VIEW", "-d", url},
+				[]string{"/data/data/com.termux/files/usr/bin/termux-open-url", url},
+				[]string{"/system/bin/am", "start", "-a", "android.intent.action.VIEW", "-d", url},
+			)
+		} else {
+			candidates = append(candidates,
+				[]string{"xdg-open", url},
+				[]string{"gio", "open", url},
 			)
 		}
-		candidates = append(candidates,
-			[]string{"xdg-open", url},
-			[]string{"gio", "open", url},
-		)
 	default:
 		return fmt.Errorf("지원하지 않는 운영체제: %s", runtime.GOOS)
 	}
@@ -71,12 +74,13 @@ func OpenBrowser(url string) error {
 		if len(c) == 0 {
 			continue
 		}
-		path, err := exec.LookPath(c[0])
-		if err != nil {
-			lastErr = err
-			continue
+		if strings.HasPrefix(c[0], "/") {
+			if _, err := os.Stat(c[0]); err != nil {
+				lastErr = err
+				continue
+			}
 		}
-		cmd := exec.Command(path, c[1:]...)
+		cmd := exec.Command(c[0], c[1:]...)
 		if err := cmd.Start(); err != nil {
 			lastErr = err
 			continue
