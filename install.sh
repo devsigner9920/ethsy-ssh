@@ -2,7 +2,7 @@
 # ethsy-connect installer for Linux/Termux
 # Usage: curl -fsSL https://raw.githubusercontent.com/devsigner9920/ethsy-ssh/main/install.sh | bash
 
-set -e
+set -euo pipefail
 
 REPO="devsigner9920/ethsy-ssh"
 BINARY="ethsy"
@@ -31,7 +31,15 @@ esac
 
 ASSET="ethsy-connect_${OS}_${ARCH}.tar.gz"
 
+IS_TERMUX=0
+if [ -n "${TERMUX_VERSION:-}" ] || [ "${PREFIX:-}" = "/data/data/com.termux/files/usr" ]; then
+  IS_TERMUX=1
+fi
+
 echo "Detecting environment: ${OS}/${ARCH}"
+if [ "$IS_TERMUX" -eq 1 ]; then
+  echo "Termux detected"
+fi
 
 # Get latest release tag
 LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)
@@ -42,6 +50,14 @@ if [ -z "$LATEST" ]; then
 fi
 
 echo "Latest version: ${LATEST}"
+
+if [ "$IS_TERMUX" -eq 1 ]; then
+  if command -v pkg >/dev/null 2>&1; then
+    echo "Installing Termux runtime dependencies (openssh, curl, tar)..."
+    pkg update -y >/dev/null 2>&1 || true
+    pkg install -y openssh curl tar >/dev/null 2>&1 || true
+  fi
+fi
 
 URL="https://github.com/${REPO}/releases/download/${LATEST}/${ASSET}"
 
@@ -80,4 +96,7 @@ if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
 fi
 
 echo ""
+if [ "$IS_TERMUX" -eq 1 ]; then
+  echo "Tip (Termux): ensure these are installed: pkg install openssh"
+fi
 echo "Run 'ethsy' to get started!"

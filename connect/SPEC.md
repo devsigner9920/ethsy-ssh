@@ -6,9 +6,19 @@
 
 ## 설치
 
+### macOS (Homebrew)
+
 ```bash
 brew tap devsigner9920/tap
 brew install ethsy-connect
+```
+
+### Termux (Android)
+
+```bash
+pkg update -y
+pkg install -y curl tar openssh
+curl -fsSL https://raw.githubusercontent.com/devsigner9920/ethsy-ssh/main/install-termux.sh | bash
 ```
 
 설치 후 `ethsy` 명령어 사용 가능.

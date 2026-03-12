@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
@@ -44,16 +45,49 @@ func GenerateSessionID() (string, error) {
 
 // OpenBrowser opens the given URL in the default browser.
 func OpenBrowser(url string) error {
-	var cmd *exec.Cmd
+	var candidates [][]string
+
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("open", url)
+		candidates = [][]string{{"open", url}}
 	case "linux":
-		cmd = exec.Command("xdg-open", url)
+		// Termux first, then generic Linux openers.
+		if os.Getenv("TERMUX_VERSION") != "" {
+			candidates = append(candidates,
+				[]string{"termux-open-url", url},
+				[]string{"am", "start", "-a", "android.intent.action.VIEW", "-d", url},
+			)
+		}
+		candidates = append(candidates,
+			[]string{"xdg-open", url},
+			[]string{"gio", "open", url},
+		)
 	default:
 		return fmt.Errorf("지원하지 않는 운영체제: %s", runtime.GOOS)
 	}
-	return cmd.Start()
+
+	var lastErr error
+	for _, c := range candidates {
+		if len(c) == 0 {
+			continue
+		}
+		path, err := exec.LookPath(c[0])
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		cmd := exec.Command(path, c[1:]...)
+		if err := cmd.Start(); err != nil {
+			lastErr = err
+			continue
+		}
+		return nil
+	}
+
+	if lastErr != nil {
+		return fmt.Errorf("브라우저를 열 수 없습니다: %w", lastErr)
+	}
+	return fmt.Errorf("브라우저를 열 수 없습니다")
 }
 
 // Authenticate runs the full OAuth flow: generate session ID, open browser,
