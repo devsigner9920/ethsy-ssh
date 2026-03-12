@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -46,63 +44,16 @@ func GenerateSessionID() (string, error) {
 
 // OpenBrowser opens the given URL in the default browser.
 func OpenBrowser(url string) error {
-	var candidates [][]string
-
 	switch runtime.GOOS {
 	case "darwin":
-		candidates = [][]string{{"open", url}}
+		return exec.Command("open", url).Start()
 	case "linux":
-		isTermux := os.Getenv("TERMUX_VERSION") != "" ||
-			os.Getenv("PREFIX") == "/data/data/com.termux/files/usr" ||
-			strings.Contains(os.Getenv("HOME"), "/data/data/com.termux")
-
-		if isTermux {
-			// Termux/Android: absolute paths only (avoid LookPath/faccessat2 SIGSYS).
-			candidates = append(candidates,
-				[]string{"/data/data/com.termux/files/usr/bin/termux-open-url", url},
-				[]string{"/system/bin/am", "start", "-a", "android.intent.action.VIEW", "-d", url},
-			)
-		} else {
-			// Non-Termux Linux: absolute common paths first, then explicit fallback.
-			candidates = append(candidates,
-				[]string{"/usr/bin/xdg-open", url},
-				[]string{"/bin/xdg-open", url},
-				[]string{"/usr/bin/gio", "open", url},
-			)
-		}
+		// Linux/Termux: avoid browser auto-launch to prevent SIGSYS on some Android seccomp profiles.
+		// User can manually open the printed URL.
+		return nil
 	default:
 		return fmt.Errorf("지원하지 않는 운영체제: %s", runtime.GOOS)
 	}
-
-	// On some Android/Termux environments, process spawning may be blocked by seccomp.
-	// In that case, user can open printed URL manually; do not crash auth flow.
-	if os.Getenv("ANDROID_ROOT") != "" && runtime.GOOS == "linux" {
-		return nil
-	}
-
-	var lastErr error
-	for _, c := range candidates {
-		if len(c) == 0 {
-			continue
-		}
-		if strings.HasPrefix(c[0], "/") {
-			if _, err := os.Stat(c[0]); err != nil {
-				lastErr = err
-				continue
-			}
-		}
-		cmd := exec.Command(c[0], c[1:]...)
-		if err := cmd.Start(); err != nil {
-			lastErr = err
-			continue
-		}
-		return nil
-	}
-
-	if lastErr != nil {
-		return fmt.Errorf("브라우저를 열 수 없습니다: %w", lastErr)
-	}
-	return fmt.Errorf("브라우저를 열 수 없습니다")
 }
 
 // Authenticate runs the full OAuth flow: generate session ID, open browser,
