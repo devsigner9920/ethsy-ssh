@@ -14,16 +14,51 @@ or directly:
 curl -fsSL https://raw.githubusercontent.com/devsigner9920/ethsy-ssh/main/install.sh | bash
 ```
 
-## Why `pkg install ethsy-connect` is not default yet
+## `pkg install ethsy-connect` (custom repo mode)
 
-`pkg install <name>` works only for packages published in a Termux apt repository.
+`pkg install <name>` requires a Termux apt repository. This repo now includes scripts to build and publish one.
 
-Current support in this repo provides:
-- Termux-compatible `linux/arm64` binary
-- Termux browser-open fallback (`termux-open-url`, `am start`, `xdg-open`)
-- Termux install script (`install-termux.sh`)
+### A. Build package + repo metadata
 
-If you want true `pkg install ethsy-connect`, publish this package to a Termux apt repo (official or custom).
+Run on a Termux/Linux environment with Go + dpkg tools:
+
+```bash
+pkg install -y golang dpkg dpkg-dev
+cd ethsy-ssh
+./packaging/termux/scripts/build-deb.sh
+./packaging/termux/scripts/build-repo-index.sh
+```
+
+Outputs:
+- `packaging/termux/repo/ethsy-connect_<version>_aarch64.deb`
+- `packaging/termux/repo/Packages`
+- `packaging/termux/repo/Packages.gz`
+- `packaging/termux/repo/Release`
+
+### B. Host the repo directory
+
+Host `packaging/termux/repo` on any static host (GitHub Pages, S3, your server).
+
+### C. Install via pkg from custom repo
+
+On a Termux device:
+
+```bash
+REPO_BASE_URL=https://<your-host>/termux/repo ./packaging/termux/scripts/install-from-custom-repo.sh
+```
+
+That script adds:
+
+```bash
+deb [trusted=yes] https://<your-host>/termux/repo ./
+```
+
+then runs:
+
+```bash
+pkg update -y
+pkg install -y ethsy-connect
+```
 
 ## Runtime requirements
 
